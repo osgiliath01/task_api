@@ -6,7 +6,7 @@ import models
 
 
 class Task(BaseModel):
-    id:int
+    id: None
     title:str
     completed:bool=False
 
@@ -25,15 +25,20 @@ def get_db():
         db.close()  
 
 app = FastAPI()
+# Root Endpoint
+@app.get("/")
+def read_root():
+    return {"message":"hello world!"}
 
 @app.get("/tasks")
 def get_tasks(db: Session = Depends(get_db)):
     tasks = db.query(models.Task).all()
     return {"tasks":tasks}
 
+# Read the incoming request body, validate it against Task schema from Step 2, and pass it as task.
 @app.post("/tasks")
-def create_tasks(task: Task, db: Session = Depends(get_db)): # "Read the incoming request body, validate it against my Task schema from Step 2, and pass it as task."
-    db_task = models.Task(id=task.id,title=task.title,completed=task.completed)
+def create_tasks(task: Task, db: Session = Depends(get_db)):
+    db_task = models.Task(title=task.title,completed=task.completed)
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
@@ -44,11 +49,11 @@ def delete_task(task_id: int,db: Session = Depends(get_db)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if task is None:
         raise HTTPException(status_code=404,detail="Task not found")
+
+    if not task.completed:
+        return{"message": "Task not yet completed."}
+   
     db.delete(task)
     db.commit()
     return {"message": "Successfully deleted task!"}
-
-@app.get("/")
-def read_root():
-    return {"message":"hello world!"}
 
